@@ -4,11 +4,10 @@ import {default as commandLineArgs} from 'command-line-args';
 import {default as PouchDB} from 'pouchdb';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
-import { default as uuidv4 } from "uuid/v4";
 
 import { Repo } from './Repo';
 import { Controller } from './Controller';
-import { getRandomString, get7zProcesses, create7zArchive } from "./utils";
+import { Utils } from "./Utils";
 
 const options = commandLineArgs([
   {name: 'port', alias: 'p', type: Number, defaultValue: 8886},
@@ -18,7 +17,8 @@ const options = commandLineArgs([
 let conf = JSON.parse(readFileSync(options.configuration, {encoding: 'utf8'}));
 let pdb = new PouchDB(`${conf.workingDirectory}/oat_pdb`);
 let repo = new Repo(pdb);
-let controller = new Controller(repo, conf, uuidv4, getRandomString, get7zProcesses, create7zArchive);
+let utils = new Utils();
+let controller = new Controller(repo, conf, utils);
 let app = express();
 
 app.use(bodyParser.json());
@@ -42,14 +42,8 @@ app.listen(options.port);
 
 setInterval(async () => {
   try {
-    (await repo.getAllUploads()).filter(elem => {
-      return elem.status === 'ok';
-    }).forEach(async elem => {
-      if (elem.stage === 'initialized') {
-        await controller.startCompression(elem);
-      }
-    });
+    controller.doPeriodicCheck();
   } catch (err) {
     console.log(err.Error || err);
   }
-}, 10000);
+}, 1000);
