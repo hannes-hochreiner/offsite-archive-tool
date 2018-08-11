@@ -1,3 +1,9 @@
+# Custom
+bld
+docs
+bld_test
+oat_pdb
+
 # Logs
 logs
 *.log

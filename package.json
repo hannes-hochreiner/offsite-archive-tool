@@ -1,0 +1,36 @@
+{
+  "name": "offsite-archive-tool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bld/index.js",
+  "scripts": {
+    "start": "npm run build && node bld/index.js",
+    "build": "babel src -d bld",
+    "docs": "esdoc",
+    "test": "npm run build && babel src_test -d bld_test && jasmine --config=jasmine.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hannes-hochreiner/offsite-archive-tool.git"
+  },
+  "author": "Hannes Hochreiner <hannes@hochreiner.net>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hannes-hochreiner/offsite-archive-tool/issues"
+  },
+  "homepage": "https://github.com/hannes-hochreiner/offsite-archive-tool#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "command-line-args": "^5.0.2",
+    "express": "^4.16.3",
+    "pouchdb": "^7.0.0",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "esdoc": "^1.1.0",
+    "esdoc-standard-plugin": "^1.0.0",
+    "jasmine": "^3.1.0"
+  }
+}
