@@ -45,7 +45,7 @@ setInterval(async () => {
     (await repo.getAllUploads()).filter(elem => {
       return elem.status === 'ok';
     }).forEach(async elem => {
-      if (element.stage === 'initialized') {
+      if (elem.stage === 'initialized') {
         await controller.startCompression(elem);
       }
     });
