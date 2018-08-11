@@ -1,21 +1,19 @@
-import { default as util } from "util";
-import {spawn, exec as cp_exec} from 'child_process';
-import {randomBytes} from 'crypto';
+import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 import { default as uuidv4 } from "uuid/v4";
 
 export class Utils {
   constructor() {
-    this.exec = util.promisify(cp_exec);
     this.uuid = uuidv4;
   }
 
   getRandomString(length) {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTXYZ1234567890';
   
-    return new Promise((res, rej) => {
+    return new Promise((resolve, reject) => {
       randomBytes(length, (err, buf) => {
         if (err) {
-          rej(err);
+          reject(err);
           return;
         }
   
@@ -31,61 +29,38 @@ export class Utils {
           pw += chars[idx];
         }
   
-        res(pw);
+        resolve(pw);
       });
     });
   }
 
-  get7zProcesses(sshUser, sshIdFile, host) {
-    return new Promise((res, rej) => {
-      let proc = spawn('ssh', ['-i', sshIdFile, `${sshUser}@${host}`, "ps -Ao pid,fname"]);
-      let stdout = '';
-      let stderr = '';
-  
-      proc.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-  
-      proc.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-  
-      proc.on('exit', (code, signal) => {
-        if (code !== 0) {
-          rej(stderr);
-          return;
-        }
-  
-        res(stdout.split('\n').filter(entry => {
-          return entry.trim() !== '' && entry.endsWith('7z');
-        }));
-      });
-    });
-  }
-
-  create7zArchive(sshUser, sshIdFile, host, uploadId, uploadUri, password) {
-    return new Promise((res, rej) => {
-      let archiveFilename = `${uploadId}.7z`;
-      let archiveLogFilename = `${uploadId}.log`;
+  spawnRemoteCommand(ssh, command) {
+    return new Promise((resolve, reject) => {
       let proc = spawn('ssh', [
         '-i',
-        sshIdFile,
-        `${sshUser}@${host}`,
-        `7z a -t7z -mhe=on -p${password} ~/${archiveFilename} ${uploadUri} </dev/null &>~/${archiveLogFilename} &`
+        ssh.idFile,
+        `${ssh.user}@${ssh.host}`,
+        command
       ]);
+
+      let stdout = '';
       let stderr = '';
-  
-      proc.stderr.on('data', (data) => {
-        stderr += data.toString();
+
+      proc.stdout.on('data', (data) => {
+        stdout += data;
       });
-  
-      proc.on('exit', (code) => {
+      
+      proc.stderr.on('data', (data) => {
+        stderr += data;
+      });
+      
+      proc.on('close', (code) => {
         if (code !== 0) {
-          rej(stderr);
+          reject(stderr);
           return;
         }
-  
-        res({archiveFilename: archiveFilename, archiveLogFilename: archiveLogFilename});
+
+        resolve(stdout);
       });
     });
   }
