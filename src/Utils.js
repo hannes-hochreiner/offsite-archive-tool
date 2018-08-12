@@ -34,6 +34,19 @@ export class Utils {
     });
   }
 
+  spawnDetached(command, args) {
+    return new Promise((resolve, reject) => {
+      let proc = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+
+      proc.unref();
+
+      resolve(proc.pid.toString());
+    });
+  }
+
   spawnRemoteCommand(ssh, command) {
     return new Promise((resolve, reject) => {
       let proc = spawn('ssh', [

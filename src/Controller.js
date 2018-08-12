@@ -17,6 +17,21 @@ export class Controller {
         if (ll === 'Everything is Ok\n') {
           await this.startHashing(elem);
         }
+      } else if (elem.stage === 'hashing') {
+        // check whether the hashing process is still running
+        let resPs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ps -Ao pid | grep ${elem.hashing.pid}`);
+
+        if (resPs.trim() === '') {
+          // check whether the file containing the hash has been created
+          let resLs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ls ${elem.hashing.filename}`);
+
+          if (resLs.trim() !== '') {
+            // start transfer
+            await this.startTransfer(elem);
+          } else {
+            // error
+          }
+        }
       }
     });
   }
@@ -60,6 +75,19 @@ export class Controller {
       `sha256sum -b ${doc.compression.filename} </dev/null &>${doc.hashing.filename} & echo $!`
     )).trim();
     doc.stage = 'hashing';
+
+    await this._repo.putUpload(doc);
+  }
+
+  async startTransfer(doc) {
+    doc.transfer = {};
+    doc.transfer.pid = (await this._utils.spawnDetached('scp', [
+      '-i',
+      this._conf.ssh.idFile,
+      `${this._conf.ssh.user}@${this._conf.ssh.host}:${doc.compression.filename}`,
+      `${this._conf.workingDirectory}/${doc.compression.filename}`
+    ])).trim();
+    doc.stage = 'transferring';
 
     await this._repo.putUpload(doc);
   }

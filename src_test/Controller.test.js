@@ -5,14 +5,45 @@ describe('Controller', () => {
 
   beforeEach(() => {
     conf = {
+      workingDirectory: 'testDirectory',
       ssh: {
         user: 'test',
         idFile: 'test_id_rsa',
         host: 'testHost'
       }
     };
-    utils = jasmine.createSpyObj('utils', ['spawnRemoteCommand', 'getRandomString']);
+    utils = jasmine.createSpyObj('utils', ['spawnDetached', 'spawnRemoteCommand', 'getRandomString']);
     repo = jasmine.createSpyObj('repo', ['putUpload']);
+  });
+
+  it('should be able to start the transfer', async () => {
+    utils.spawnDetached.and.returnValue(Promise.resolve('1234\n'));
+
+    let ctrllr = new Controller(repo, conf, utils);
+
+    await ctrllr.startTransfer({
+      id: 'testId',
+      compression: {
+        filename: 'testFile.7z'
+      }
+    });
+
+    expect(utils.spawnDetached).toHaveBeenCalledWith('scp', [
+      '-i',
+      'test_id_rsa',
+      'test@testHost:testFile.7z',
+      'testDirectory/testFile.7z'
+    ]);
+    expect(repo.putUpload).toHaveBeenCalledWith({
+      id: 'testId',
+      stage: 'transferring',
+      compression: {
+        filename: 'testFile.7z'
+      },
+      transfer: {
+        pid: '1234'
+      }
+    });
   });
 
   it('should be able to trigger the compression of a remote file', async () => {

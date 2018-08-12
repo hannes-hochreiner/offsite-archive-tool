@@ -77,7 +77,7 @@ Transferring the compressed archive file from the storage computer to the host c
     {
       id: <String>,
       uri: <String>,
-      stage: 'hashing',
+      stage: 'transferring',
       compression: {
         password: <String>,
         filename: <String>,
