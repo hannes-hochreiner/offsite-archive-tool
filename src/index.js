@@ -11,7 +11,7 @@ import { Utils } from "./Utils";
 
 const options = commandLineArgs([
   {name: 'port', alias: 'p', type: Number, defaultValue: 8886},
-  {name: 'interval', alias: 'i', type: Number, defaultValue: 10000},
+  {name: 'interval', alias: 'i', type: Number, defaultValue: 60000},
   {name: 'configuration', alias: 'c', type: String, defaultValue: `${homedir()}/.config/offsite-archive-tool/offsite-archive-tool.json`}
 ]);
 
