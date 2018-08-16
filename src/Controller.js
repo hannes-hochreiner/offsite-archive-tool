@@ -19,9 +19,9 @@ export class Controller {
         }
       } else if (elem.stage === 'hashing') {
         // check whether the hashing process is still running
-        let resPs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ps -Ao pid | grep ${elem.hashing.pid}`);
+        let resPs = await this._utils.spawnRemoteCommand(this._conf.ssh, 'ps -Ao pid');
 
-        if (resPs.trim() === '') {
+        if (!resPs.split('\n').includes(elem.hashing.pid)) {
           // check whether the file containing the hash has been created
           let resLs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ls ${elem.hashing.filename}`);
 
