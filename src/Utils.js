@@ -82,7 +82,10 @@ export class Utils {
     return new Promise((resolve, reject) => {
       exec(command, (error, stdout, stderr) => {
         if (error) {
-          reject(error);
+          reject({
+            error: error,
+            stderr: stderr
+          });
           return;
         }
 

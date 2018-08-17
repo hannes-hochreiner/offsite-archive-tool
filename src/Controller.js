@@ -9,44 +9,49 @@ export class Controller {
     (await this._repo.getAllUploads()).filter(elem => {
       return elem.status === 'ok';
     }).forEach(async elem => {
-      if (elem.stage === 'initialized') {
-        await this.startCompression(elem);
-      } else if (elem.stage === 'compressing') {
-        let ll = await this._utils.spawnRemoteCommand(this._conf.ssh, `tail -n 1 ${elem.compression.logFilename}`);
-
-        if (ll === 'Everything is Ok\n') {
-          await this.startHashing(elem);
-        }
-      } else if (elem.stage === 'hashing') {
-        // check whether the hashing process is still running
-        let resPs = await this._utils.spawnRemoteCommand(this._conf.ssh, 'ps -Ao pid');
-
-        if (!resPs.split('\n').includes(elem.hashing.pid)) {
-          // check whether the file containing the hash has been created
-          let resLs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ls ${elem.hashing.filename}`);
-
-          if (resLs.trim() !== '') {
-            // start transfer
-            await this.startTransfer(elem);
-          } else {
-            // error
+      try {
+        if (elem.stage === 'initialized') {
+          await this.startCompression(elem);
+        } else if (elem.stage === 'compressing') {
+          let ll = await this._utils.spawnRemoteCommand(this._conf.ssh, `tail -n 1 ${elem.compression.logFilename}`);
+  
+          if (ll === 'Everything is Ok\n') {
+            await this.startHashing(elem);
+          }
+        } else if (elem.stage === 'hashing') {
+          // check whether the hashing process is still running
+          let resPs = await this._utils.spawnRemoteCommand(this._conf.ssh, 'ps -Ao pid');
+  
+          if (!resPs.split('\n').includes(elem.hashing.pid)) {
+            // check whether the file containing the hash has been created
+            let resLs = await this._utils.spawnRemoteCommand(this._conf.ssh, `ls ${elem.hashing.filename}`);
+  
+            if (resLs.trim() !== '') {
+              // start transfer
+              await this.startTransfer(elem);
+            } else {
+              // error
+            }
+          }
+        } else if (elem.stage === 'transferring') {
+          // check whether the transfer process is still running
+          let resPs = await this._utils.exec('ps -Ao pid');
+  
+          if (!resPs.split('\n').includes(elem.transfer.pid)) {
+            // check whether the file has been created
+            let resLs = await this._utils.exec(`ls ${this._conf.workingDirectory}/${elem.compression.filename}`);
+  
+            if (resLs.trim() !== '') {
+              // start hash check
+              await this.startHashCheck(elem);
+            } else {
+              // error
+            }
           }
         }
-      } else if (elem.stage === 'transferring') {
-        // check whether the transfer process is still running
-        let resPs = await this._utils.exec('ps -Ao pid');
-
-        if (!resPs.split('\n').includes(elem.transfer.pid)) {
-          // check whether the file has been created
-          let resLs = await this._utils.exec(`ls ${this._conf.workingDirectory}/${elem.compression.filename}`);
-
-          if (resLs.trim() !== '') {
-            // start hash check
-            await this.startHashCheck(elem);
-          } else {
-            // error
-          }
-        }
+      } catch (error) {
+        console.log(error.error || error);
+        console.log(error.stderr || '');
       }
     });
   }
