@@ -34,11 +34,11 @@ export class Controller {
         }
       } else if (elem.stage === 'transferring') {
         // check whether the transfer process is still running
-        let resPs = await this._utils.spawnCommand('ps', ['-Ao', 'pid']);
+        let resPs = await this._utils.exec('ps -Ao pid');
 
         if (!resPs.split('\n').includes(elem.transfer.pid)) {
           // check whether the file has been created
-          let resLs = await this._utils.spawnCommand('ls', [`${this._conf.workingDirectory}/${elem.compression.filename}`]);
+          let resLs = await this._utils.exec(`ls ${this._conf.workingDirectory}/${elem.compression.filename}`);
 
           if (resLs.trim() !== '') {
             // start hash check
