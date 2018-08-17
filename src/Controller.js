@@ -35,11 +35,11 @@ export class Controller {
           }
         } else if (elem.stage === 'transferring') {
           // check whether the transfer process is still running
-          let resPs = await this._utils.exec('ps -Ao pid');
+          let resPs = await this._utils.execCommand('ps -Ao pid');
   
           if (!resPs.split('\n').includes(elem.transfer.pid)) {
             // check whether the file has been created
-            let resLs = await this._utils.exec(`ls ${this._conf.workingDirectory}/${elem.compression.filename}`);
+            let resLs = await this._utils.execCommand(`ls ${this._conf.workingDirectory}/${elem.compression.filename}`);
   
             if (resLs.trim() !== '') {
               // start hash check
@@ -116,7 +116,7 @@ export class Controller {
   async startHashCheck(doc) {
     doc.hashCheck = {};
     doc.hashCheck.filename = `${this._conf.workingDirectory}/${doc.id}.hash`;
-    doc.hashCheck.pid = (await this._utils.exec(`sha256sum -b ${this._conf.workingDirectory}/${doc.compression.filename} </dev/null 2>/dev/null 1>${doc.hashCheck.filename} & echo $!`)).trim();
+    doc.hashCheck.pid = (await this._utils.execCommand(`sha256sum -b ${this._conf.workingDirectory}/${doc.compression.filename} </dev/null 2>/dev/null 1>${doc.hashCheck.filename} & echo $!`)).trim();
     doc.stage = 'checking_hash';
 
     await this._repo.putUpload(doc);
