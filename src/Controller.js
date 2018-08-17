@@ -32,6 +32,21 @@ export class Controller {
             // error
           }
         }
+      } else if (elem.stage === 'transferring') {
+        // check whether the transfer process is still running
+        let resPs = await this._utils.spawnCommand('ps', ['-Ao', 'pid']);
+
+        if (!resPs.split('\n').includes(elem.transfer.pid)) {
+          // check whether the file has been created
+          let resLs = await this._utils.spawnCommand('ls', [`${this._conf.workingDirectory}/${elem.compression.filename}`]);
+
+          if (resLs.trim() !== '') {
+            // start hash check
+            await this.startHashCheck(elem);
+          } else {
+            // error
+          }
+        }
       }
     });
   }
@@ -81,13 +96,23 @@ export class Controller {
 
   async startTransfer(doc) {
     doc.transfer = {};
+    doc.transfer.filename = `${this._conf.workingDirectory}/${doc.compression.filename}`;
     doc.transfer.pid = (await this._utils.spawnDetached('scp', [
       '-i',
       this._conf.ssh.idFile,
       `${this._conf.ssh.user}@${this._conf.ssh.host}:${doc.compression.filename}`,
-      `${this._conf.workingDirectory}/${doc.compression.filename}`
+      doc.transfer.filename
     ])).trim();
     doc.stage = 'transferring';
+
+    await this._repo.putUpload(doc);
+  }
+
+  async startHashCheck(doc) {
+    doc.hashCheck = {};
+    doc.hashCheck.filename = `${this._conf.workingDirectory}/${doc.id}.hash`;
+    doc.hashCheck.pid = (await this._utils.exec(`sha256sum -b ${this._conf.workingDirectory}/${doc.compression.filename} </dev/null 2>/dev/null 1>${doc.hashCheck.filename} & echo $!`)).trim();
+    doc.stage = 'checking_hash';
 
     await this._repo.putUpload(doc);
   }

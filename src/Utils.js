@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { randomBytes } from 'crypto';
 import { default as uuidv4 } from "uuid/v4";
 
@@ -70,6 +70,19 @@ export class Utils {
       proc.on('close', (code) => {
         if (code !== 0) {
           reject(stderr);
+          return;
+        }
+
+        resolve(stdout);
+      });
+    });
+  }
+
+  execCommand(command) {
+    return new Promise((resolve, reject) => {
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
           return;
         }
 
