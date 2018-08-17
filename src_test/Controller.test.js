@@ -41,6 +41,7 @@ describe('Controller', () => {
         filename: 'testFile.7z'
       },
       transfer: {
+        filename: 'testDirectory/testFile.7z',
         pid: '1234'
       }
     });
