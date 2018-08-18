@@ -33,7 +33,7 @@ export class Repo {
     return await this._pdb.get(`uploadParts/${uploadId}/${id}`);
   }
 
-  async getAllUploadPartsForUpload(uploadId) {
+  async getUploadPartsByUploadId(uploadId) {
     return (await this._pdb.allDocs({
       include_docs: true,
       startkey: `uploadParts/${uploadId}/`,

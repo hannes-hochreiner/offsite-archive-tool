@@ -42,6 +42,9 @@ app.use(bodyParser.json());
 app.get('/uploads', async (request, response) => {
   response.send(await controller.getAllUploads());
 });
+app.get('/uploads/:id/parts', async (request, response) => {
+  response.send(await controller.getUploadPartsByUploadId(request.params.id));
+});
 // curl -d '{"uri": "test"}' localhost:8886/uploads -H "Content-Type:application/json"
 app.post('/uploads', async (request, response) => {
   response.send({id: await controller.postUpload({uri: request.body.uri})});

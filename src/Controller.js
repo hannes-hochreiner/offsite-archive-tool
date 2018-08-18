@@ -71,6 +71,10 @@ export class Controller {
     return await this._repo.getAllUploads();
   }
 
+  async getUploadPartsByUploadId(uploadId) {
+    return await this._repo.getUploadPartsByUploadId(uploadId);
+  }
+
   async postUpload(doc) {
     doc.id = this._utils.uuid();
     doc.stage = 'initialized';
