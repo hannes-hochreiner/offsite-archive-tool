@@ -205,12 +205,15 @@ export class Controller {
           let newPart = that._repo.getUploadPartByUploadIdId(part.uploadId, part.id);
 
           if (err) {
+            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'failed'});
             newPart.status = 'failed';
             console.log(err);
-          } else if (data.checksum !== param.checksum) {
+          } else if (data.checksum !== params.checksum) {
+            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'failed'});
             newPart.status = 'failed';
             console.log('checksum failed');
           } else {
+            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'succeeded'});
             newPart.status = 'succeeded';
             console.log(`uploaded part ${part.start}-${part.end}`);
           }
@@ -219,10 +222,19 @@ export class Controller {
         });
         uploadingParts++;
         part.status = 'uploading';
-
+        part.log.push({timestamp: that._utils.getTimestamp(), message: 'uploading'});
+        
         this._repo.putUploadPart(part);
       } else if (part.status === 'uploading') {
-        uploadingParts++;
+        // switch to program restart marker
+        if ((new Date() - new Date(part.log[part.log.length - 1].timestamp)) / (1000 * 60) > 20) {
+          part.status = 'initialized';
+          part.log.push({timestamp: that._utils.getTimestamp(), message: 'restarting'});
+
+          this._repo.putUploadPart(part);
+        } else {
+          uploadingParts++;
+        }
       }
     }
   }
