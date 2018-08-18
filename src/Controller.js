@@ -183,7 +183,7 @@ export class Controller {
     let maxUploadingParts = 8;
     let uploadingParts = 0;
     
-    for (let cntr = 0; uploadingParts <= maxUploadingParts && cntr < parts.length; cntr++) {
+    for (let cntr = 0; uploadingParts < maxUploadingParts && cntr < parts.length; cntr++) {
       let part = parts[cntr];
 
       if (part.status === 'initialized') {
@@ -218,6 +218,13 @@ export class Controller {
         } else {
           uploadingParts++;
         }
+      } else if (part.status === 'failed') {
+        if (new Date() - new Date(part.log[part.log.length - 1].timestamp) > 1000 * 60 * 10) {
+          part.status = 'initialized';
+          part.log.push({timestamp: this._utils.getTimestamp(), message: 'retrying'});
+
+          this._repo.putUploadPart(part);
+        }
       }
     }
   }
@@ -230,13 +237,11 @@ export class Controller {
       part.status = 'failed';
       console.log(error);
     } else if (data.checksum !== part.treeHash) {
-      part.log.push({timestamp: this._utils.getTimestamp(), message: 'failed'});
+      part.log.push({timestamp: this._utils.getTimestamp(), message: 'checksum failed'});
       part.status = 'failed';
-      console.log('checksum failed');
     } else {
       part.log.push({timestamp: this._utils.getTimestamp(), message: 'succeeded'});
       part.status = 'succeeded';
-      console.log(`uploaded part ${part.start}-${part.end}`);
     }
 
     this._repo.putUploadPart(part);

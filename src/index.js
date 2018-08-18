@@ -13,7 +13,7 @@ import { Utils } from "./Utils";
 const options = commandLineArgs([
   {name: 'aws_access_key', alias: 'a', type: String},
   {name: 'port', alias: 'p', type: Number, defaultValue: 8886},
-  {name: 'interval', alias: 'i', type: Number, defaultValue: 60000},
+  {name: 'interval', alias: 'i', type: Number, defaultValue: 30000},
   {name: 'configuration', alias: 'c', type: String, defaultValue: `${homedir()}/.config/offsite-archive-tool/offsite-archive-tool.json`}
 ]);
 
