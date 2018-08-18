@@ -180,7 +180,7 @@ export class Controller {
 
   async checkUploadPartsForUpload(doc) {
     let parts = await this._repo.getUploadPartsByUploadId(doc.id);
-    let maxUploadingParts = 4;
+    let maxUploadingParts = 8;
     let uploadingParts = 0;
     
     for (let cntr = 0; uploadingParts <= maxUploadingParts && cntr < parts.length; cntr++) {
