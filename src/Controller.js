@@ -205,7 +205,7 @@ export class Controller {
         this._glacier.uploadMultipartPart(params, this._partUploadCallback.bind(this, part.uploadId, part.id));
         uploadingParts++;
         part.status = 'uploading';
-        part.restartTimestamp = this._config.restartTimestamp;
+        part.restartTimestamp = this._conf.restartTimestamp;
         part.log.push({timestamp: this._utils.getTimestamp(), message: 'uploading'});
         
         this._repo.putUploadPart(part);
