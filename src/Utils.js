@@ -1,11 +1,56 @@
 import { spawn, exec } from 'child_process';
 import { randomBytes } from 'crypto';
-import { readFile as rf, stat } from "fs";
+import { readFile as rf, stat, open, read, close } from "fs";
 import { default as uuidv4 } from "uuid/v4";
 
 export class Utils {
   constructor() {
     this.uuid = uuidv4;
+  }
+
+  closeFd(fd) {
+    return new Promise((resolve, reject) => {
+      close(fd, (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  }
+
+  readFromFd(fd, start, length) {
+    return new Promise((resolve, reject) => {
+      let buf = new Buffer(length);
+
+      read(fd, buf, 0, length, start, (error, bytesRead, buffer) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        if (bytesRead !== length) {
+          reject(`size mismatch: expected to read ${length} bytes; read ${bytesRead}`);
+        }
+
+        resolve(buffer);
+      });
+    });
+  }
+
+  getFd(filename) {
+    return new Promise((resolve, reject) => {
+      open(filename, 'r', (error, fd) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(fd);
+      });
+    });
   }
 
   getTimestamp() {

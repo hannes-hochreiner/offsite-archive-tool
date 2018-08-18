@@ -59,6 +59,8 @@ export class Controller {
           if (hashLocal === hashRemote) {
             await this.startUpload(elem);
           }
+        } else if (elem.stage === 'uploading') {
+          await this.checkUploadPartsForUpload(elem);
         }
       } catch (error) {
         console.log(error.error || error);
@@ -173,6 +175,53 @@ export class Controller {
       };
 
       await this._repo.putUploadPart(up);
+    }
+  }
+
+  async checkUploadPartsForUpload(doc) {
+    let parts = await this._repo.getUploadPartsByUploadId(doc.id);
+    let maxUploadingParts = 4;
+    let uploadingParts = 0;
+    
+    for (let cntr = 0; uploadingParts <= maxUploadingParts && cntr < parts.length; cntr++) {
+      let part = parts[cntr];
+
+      if (part.status === 'initialized') {
+        let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
+        let buf = await this._utils.readFromFd(fd, part.start, part.end - part.start + 1);
+        await this._utils.closeFd(fd);
+
+        var params = {
+          accountId: '-',
+          uploadId: part.aws.uploadId,
+          vaultName: part.aws.vaultName,
+          body: buf,
+          checksum: this._glacier.computeChecksums(buf).treeHash,
+          range: `bytes ${part.start}-${part.end}/*`
+        };
+        this._glacier.uploadMultipartPart(params, function(err, data) {
+          let newPart = this._repo.getUploadPartByUploadIdId(part.uploadId, part.id);
+
+          if (err) {
+            newPart.status = 'failed';
+            console.log(err);
+          } else if (data.checksum !== param.checksum) {
+            newPart.status = 'failed';
+            console.log('checksum failed');
+          } else {
+            newPart.status = 'succeeded';
+            console.log(`uploaded part ${part.start}-${part.end}`);
+          }
+
+          this._repo.putUploadPart(newPart);
+        });
+        uploadingParts++;
+        part.status = 'uploading';
+
+        this._repo.putUploadPart(part);
+      } else if (part.status === 'uploading') {
+        uploadingParts++;
+      }
     }
   }
 
