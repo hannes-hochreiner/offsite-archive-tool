@@ -25,6 +25,7 @@ if (!options.aws_access_key) {
 let conf = JSON.parse(readFileSync(options.configuration, {encoding: 'utf8'}));
 
 conf.aws.credentials.secretAccessKey = options.aws_access_key;
+conf.restartTimestamp = (new Date()).toISOString();
 
 let pdb = new PouchDB(`${conf.workingDirectory}/oat_pdb`);
 let repo = new Repo(pdb);

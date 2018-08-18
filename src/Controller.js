@@ -171,7 +171,7 @@ export class Controller {
         start: cntr,
         end: Math.min(cntr + doc.upload.partSize, doc.upload.size) - 1,
         status: 'initialized',
-        log: [{timestamp: this._utils.getTimestamp(), message: 'initialized'}]
+        log: [{timestamp: this._utils.getTimestamp(), message: 'initialized'}],
       };
 
       await this._repo.putUploadPart(up);
@@ -205,12 +205,12 @@ export class Controller {
         this._glacier.uploadMultipartPart(params, this._partUploadCallback.bind(this, part.uploadId, part.id));
         uploadingParts++;
         part.status = 'uploading';
+        part.restartTimestamp = this._config.restartTimestamp;
         part.log.push({timestamp: this._utils.getTimestamp(), message: 'uploading'});
         
         this._repo.putUploadPart(part);
       } else if (part.status === 'uploading') {
-        // switch to program restart marker
-        if ((new Date() - new Date(part.log[part.log.length - 1].timestamp)) / (1000 * 60) > 20) {
+        if (typeof part.restartTimestamp === 'undefined' || part.restartTimestamp !== this._conf.restartTimestamp) {
           part.status = 'initialized';
           part.log.push({timestamp: this._utils.getTimestamp(), message: 'restarting'});
 
