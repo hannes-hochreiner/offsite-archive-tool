@@ -229,7 +229,7 @@ export class Controller {
         // switch to program restart marker
         if ((new Date() - new Date(part.log[part.log.length - 1].timestamp)) / (1000 * 60) > 20) {
           part.status = 'initialized';
-          part.log.push({timestamp: that._utils.getTimestamp(), message: 'restarting'});
+          part.log.push({timestamp: this._utils.getTimestamp(), message: 'restarting'});
 
           this._repo.putUploadPart(part);
         } else {
