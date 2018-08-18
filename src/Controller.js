@@ -139,7 +139,7 @@ export class Controller {
 
   async startUpload(doc) {
     doc.upload = {};
-    doc.upload.size = (await this._utils.statFile(doc.transfer.filename)).size;
+    doc.upload.size = (await this._utils.statFile(doc.transfer.filename || `${this._conf.workingDirectory}/${doc.compression.filename}`)).size;
     doc.upload.partSize = this._calculatePartSize(doc.upload.size);
 
     // initialize the multi-part upload
