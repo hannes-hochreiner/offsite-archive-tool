@@ -190,36 +190,19 @@ export class Controller {
         let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
         let buf = await this._utils.readFromFd(fd, part.start, part.end - part.start + 1);
         await this._utils.closeFd(fd);
-        let that = this;
+
+        part.treeHash = this._glacier.computeChecksums(buf).treeHash;
 
         var params = {
           accountId: '-',
           uploadId: part.aws.uploadId,
           vaultName: part.aws.vaultName,
           body: buf,
-          checksum: this._glacier.computeChecksums(buf).treeHash,
+          checksum: part.treeHash,
           range: `bytes ${part.start}-${part.end}/*`
         };
         console.log(`assigning part ${part.start}-${part.end}`);
-        this._glacier.uploadMultipartPart(params, function(err, data) {
-          let newPart = that._repo.getUploadPartByUploadIdId(part.uploadId, part.id);
-
-          if (err) {
-            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'failed'});
-            newPart.status = 'failed';
-            console.log(err);
-          } else if (data.checksum !== params.checksum) {
-            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'failed'});
-            newPart.status = 'failed';
-            console.log('checksum failed');
-          } else {
-            newPart.log.push({timestamp: that._utils.getTimestamp(), message: 'succeeded'});
-            newPart.status = 'succeeded';
-            console.log(`uploaded part ${part.start}-${part.end}`);
-          }
-
-          that._repo.putUploadPart(newPart);
-        });
+        this._glacier.uploadMultipartPart(params, this._partUploadCallback.bind(this, part.uploadId, part.id));
         uploadingParts++;
         part.status = 'uploading';
         part.log.push({timestamp: that._utils.getTimestamp(), message: 'uploading'});
@@ -237,6 +220,26 @@ export class Controller {
         }
       }
     }
+  }
+
+  _partUploadCallback(uploadId, partId, error, data) {
+    let part = this._repo.getUploadPartByUploadIdId(uploadId, partId);
+
+    if (error) {
+      part.log.push({timestamp: this._utils.getTimestamp(), message: 'failed'});
+      part.status = 'failed';
+      console.log(error);
+    } else if (data.checksum !== part.treeHash) {
+      part.log.push({timestamp: this._utils.getTimestamp(), message: 'failed'});
+      part.status = 'failed';
+      console.log('checksum failed');
+    } else {
+      part.log.push({timestamp: this._utils.getTimestamp(), message: 'succeeded'});
+      part.status = 'succeeded';
+      console.log(`uploaded part ${part.start}-${part.end}`);
+    }
+
+    this._repo.putUploadPart(part);
   }
 
   _calculatePartSize(size) {
