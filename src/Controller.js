@@ -225,6 +225,11 @@ export class Controller {
   _partUploadCallback(uploadId, partId, error, data) {
     let part = this._repo.getUploadPartByUploadIdId(uploadId, partId);
 
+    console.log(part);
+    console.log(typeof part.log);
+    console.log(error);
+    console.log(data);
+
     if (error) {
       part.log.push({timestamp: this._utils.getTimestamp(), message: 'failed'});
       part.status = 'failed';
