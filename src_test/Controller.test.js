@@ -1,7 +1,7 @@
 import { Controller } from "../bld/Controller";
 
 describe('Controller', () => {
-  let conf, repo, utils = null;
+  let conf, repo, utils, glacier = null;
 
   beforeEach(() => {
     conf = {
@@ -10,16 +10,25 @@ describe('Controller', () => {
         user: 'test',
         idFile: 'test_id_rsa',
         host: 'testHost'
+      },
+      aws: {
+        region: 'testRegion',
+        credentials: {
+          accessKeyId: 'testAccessKeyId',
+          secretAccessKey: 'testSecretAccessKey'
+        },
+        vaultName: 'testVaultName'
       }
     };
-    utils = jasmine.createSpyObj('utils', ['spawnDetached', 'spawnRemoteCommand', 'getRandomString']);
-    repo = jasmine.createSpyObj('repo', ['putUpload']);
+    utils = jasmine.createSpyObj('utils', ['getTimestamp', 'uuid', 'statFile', 'spawnDetached', 'spawnRemoteCommand', 'getRandomString']);
+    repo = jasmine.createSpyObj('repo', ['putUpload', 'putUploadPart']);
+    glacier = jasmine.createSpyObj('glacier', ['initiateMultipartUpload']);
   });
 
   it('should be able to start the transfer', async () => {
     utils.spawnDetached.and.returnValue(Promise.resolve('1234\n'));
 
-    let ctrllr = new Controller(repo, conf, utils);
+    let ctrllr = new Controller(repo, conf, utils, glacier);
 
     await ctrllr.startTransfer({
       id: 'testId',
@@ -51,7 +60,7 @@ describe('Controller', () => {
     utils.getRandomString.and.returnValue(Promise.resolve('12345678901234567890'));
     utils.spawnRemoteCommand.and.returnValue(Promise.resolve('1234\n'));
 
-    let ctrllr = new Controller(repo, conf, utils);
+    let ctrllr = new Controller(repo, conf, utils, glacier);
 
     await ctrllr.startCompression({
       id: 'testId',
@@ -79,7 +88,7 @@ describe('Controller', () => {
   it('should be able to trigger the hashing of a remote file', async () => {
     utils.spawnRemoteCommand.and.returnValue(Promise.resolve('1234\n'));
 
-    let ctrllr = new Controller(repo, conf, utils);
+    let ctrllr = new Controller(repo, conf, utils, glacier);
 
     await ctrllr.startHashing({
       id: 'testId',
@@ -99,6 +108,90 @@ describe('Controller', () => {
         filename: 'testId.hash',
         pid: '1234'
       }
+    });
+  });
+
+  it('should calculate the correct part size', () => {
+    let ctrllr = new Controller(repo, conf, utils, glacier);
+    let mega = 1024 * 1024;
+
+    expect(ctrllr._calculatePartSize(20000 * mega)).toEqual(2 * mega);
+    expect(ctrllr._calculatePartSize(20005 * mega)).toEqual(4 * mega);
+    expect(ctrllr._calculatePartSize(20589 * mega)).toEqual(4 * mega);
+    expect(ctrllr._calculatePartSize(40589 * mega)).toEqual(8 * mega);
+    expect(ctrllr._calculatePartSize(30589 * mega)).toEqual(4 * mega);
+    expect(() => {ctrllr._calculatePartSize(5000 * 10000 * mega)}).toThrow(new Error('file too large'));
+    expect(ctrllr._calculatePartSize(200)).toEqual(mega);
+    expect(ctrllr._calculatePartSize(10001 * mega)).toEqual(2 * mega);
+  });
+
+  it('should be able to trigger the the upload', async () => {
+    utils.statFile.and.returnValue(Promise.resolve({size: 1.234 * 1024 * 1024}));
+    utils.getTimestamp.and.returnValues('timestamp1', 'timestamp2');
+    utils.uuid.and.returnValues('uuTestId1', 'uuTestId2');
+    glacier.initiateMultipartUpload.and.returnValue({
+      promise: () => {
+        return Promise.resolve({
+          location: 'awsLocationTest',
+          uploadId: 'awsUploadIdTest'
+        });
+      }
+    });
+
+    let ctrllr = new Controller(repo, conf, utils, glacier);
+
+    await ctrllr.startUpload({
+      id: 'testId',
+      transfer: {
+        filename: '/home/test/testId.7z'
+      }
+    });
+
+    expect(utils.statFile).toHaveBeenCalledWith('/home/test/testId.7z');
+    expect(glacier.initiateMultipartUpload).toHaveBeenCalledWith({
+      accountId: "-", 
+      partSize: `${1024 * 1024}`, 
+      vaultName: 'testVaultName'
+    });
+    expect(repo.putUpload).toHaveBeenCalledWith({
+      id: 'testId',
+      transfer: {
+        filename: '/home/test/testId.7z'
+      },
+      upload: {
+        size: 1.234 * 1024 * 1024,
+        partSize: 1024 * 1024,
+        aws: {
+          location: 'awsLocationTest',
+          uploadId: 'awsUploadIdTest'
+        }
+      },
+      stage: 'uploading'
+    });
+    expect(repo.putUploadPart).toHaveBeenCalledTimes(2);
+    expect(repo.putUploadPart.calls.argsFor(0)[0]).toEqual({
+      id: 'uuTestId1',
+      uploadId: 'testId',
+      aws: {
+        uploadId: 'awsUploadIdTest',
+        vaultName: 'testVaultName'
+      },
+      start: 0,
+      end: 1024 * 1024 - 1,
+      status: 'initialized',
+      log: [{timestamp: 'timestamp1', message: 'initialized'}]
+    });
+    expect(repo.putUploadPart.calls.argsFor(1)[0]).toEqual({
+      id: 'uuTestId2',
+      uploadId: 'testId',
+      aws: {
+        uploadId: 'awsUploadIdTest',
+        vaultName: 'testVaultName'
+      },
+      start: 1024 * 1024,
+      end: 1.234 * 1024 * 1024 - 1,
+      status: 'initialized',
+      log: [{timestamp: 'timestamp2', message: 'initialized'}]
     });
   });
 });

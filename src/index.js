@@ -2,6 +2,7 @@ import {default as express} from 'express';
 import {default as bodyParser} from 'body-parser';
 import {default as commandLineArgs} from 'command-line-args';
 import {default as PouchDB} from 'pouchdb';
+import {default as Glacier} from 'aws-sdk/clients/glacier';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 
@@ -10,16 +11,30 @@ import { Controller } from './Controller';
 import { Utils } from "./Utils";
 
 const options = commandLineArgs([
+  {name: 'aws_access_key', alias: 'a', type: String},
   {name: 'port', alias: 'p', type: Number, defaultValue: 8886},
   {name: 'interval', alias: 'i', type: Number, defaultValue: 60000},
   {name: 'configuration', alias: 'c', type: String, defaultValue: `${homedir()}/.config/offsite-archive-tool/offsite-archive-tool.json`}
 ]);
 
+if (!options.aws_access_key) {
+  console.error('no aws access key provided');
+  process.exit(1);
+}
+
 let conf = JSON.parse(readFileSync(options.configuration, {encoding: 'utf8'}));
+
+conf.aws.credentials.secretAccessKey = options.aws_access_key;
+
 let pdb = new PouchDB(`${conf.workingDirectory}/oat_pdb`);
 let repo = new Repo(pdb);
 let utils = new Utils();
-let controller = new Controller(repo, conf, utils);
+let glacier = new Glacier({
+  apiVersion: '2012-06-01',
+  region: conf.aws.region, 
+  credentials: conf.aws.credentials
+});
+let controller = new Controller(repo, conf, utils, glacier);
 let app = express();
 
 app.use(bodyParser.json());

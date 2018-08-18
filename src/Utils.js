@@ -1,10 +1,41 @@
 import { spawn, exec } from 'child_process';
 import { randomBytes } from 'crypto';
+import { readFile as rf, stat } from "fs";
 import { default as uuidv4 } from "uuid/v4";
 
 export class Utils {
   constructor() {
     this.uuid = uuidv4;
+  }
+
+  getTimestamp() {
+    return (new Date()).toISOString();
+  }
+
+  statFile(path) {
+    return new Promise((resolve, reject) => {
+      stat(path, (error, st) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(st);
+      });
+    });
+  }
+
+  readFile(path) {
+    return new Promise((resolve, reject) => {
+      rf(path, {encoding: 'utf8'}, (error, data) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(data);
+      });
+    });
   }
 
   getRandomString(length) {

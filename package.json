@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/hannes-hochreiner/offsite-archive-tool#readme",
   "dependencies": {
+    "aws-sdk": "^2.296.0",
     "body-parser": "^1.18.3",
     "command-line-args": "^5.0.2",
     "express": "^4.16.3",

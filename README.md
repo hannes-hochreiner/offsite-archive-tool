@@ -12,6 +12,13 @@ The controller expects a configuration file containing the following information
         user: <String>,
         idFile: <String>,
         host: <String>
+      },
+      aws: {
+        region: <String>,
+        credentials: {
+          accessKeyId: <String>
+        },
+        vaultName: <String>
       }
     }
 

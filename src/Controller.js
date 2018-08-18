@@ -1,8 +1,9 @@
 export class Controller {
-  constructor(repo, conf, utils) {
+  constructor(repo, conf, utils, glacier) {
     this._repo = repo;
     this._conf = conf;
     this._utils = utils;
+    this._glacier = glacier;
   }
 
   async doPeriodicCheck() {
@@ -47,6 +48,16 @@ export class Controller {
             } else {
               // error
             }
+          }
+        } else if (elem.stage === 'checking_hash') {
+          let remoteProm = this._utils.spawnRemoteCommand(this._conf.ssh, `cat ${elem.hashing.filename}`);
+          let hashFileLocal = await this._utils.readFile(elem.hashCheck.filename);
+          let hashLocal = hashFileLocal.split('\n')[0].split(' ')[0];
+          let hashFileRemote = await remoteProm;
+          let hashRemote = hashFileRemote.split('\n')[0].split(' ')[0];
+
+          if (hashLocal === hashRemote) {
+            await this.startUpload(elem);
           }
         }
       } catch (error) {
@@ -120,5 +131,61 @@ export class Controller {
     doc.stage = 'checking_hash';
 
     await this._repo.putUpload(doc);
+  }
+
+  async startUpload(doc) {
+    doc.upload = {};
+    doc.upload.size = (await this._utils.statFile(doc.transfer.filename)).size;
+    doc.upload.partSize = this._calculatePartSize(doc.upload.size);
+
+    // initialize the multi-part upload
+    let awsRes = await this._glacier.initiateMultipartUpload({
+      accountId: "-", 
+      partSize: `${doc.upload.partSize}`, 
+      vaultName: this._conf.aws.vaultName
+    }).promise();
+
+    doc.upload.aws = {
+      location: awsRes.location,
+      uploadId: awsRes.uploadId
+    };
+    doc.stage = 'uploading';
+
+    await this._repo.putUpload(doc);
+
+    // initialize the upload parts
+    for (let cntr = 0; cntr < doc.upload.size; cntr += doc.upload.partSize) {
+      let up = {
+        id: this._utils.uuid(),
+        uploadId: doc.id,
+        aws: {
+          uploadId: doc.upload.aws.uploadId,
+          vaultName: this._conf.aws.vaultName
+        },
+        start: cntr,
+        end: Math.min(cntr + doc.upload.partSize, doc.upload.size) - 1,
+        status: 'initialized',
+        log: [{timestamp: this._utils.getTimestamp(), message: 'initialized'}]
+      };
+
+      await this._repo.putUploadPart(up);
+    }
+  }
+
+  _calculatePartSize(size) {
+    let mega = 1024 * 1024;
+    let minSize = Math.ceil(size / 10000);
+
+    if (minSize < mega) {
+      return mega;
+    }
+
+    let minSizeM = Math.pow(2, Math.ceil(Math.log2(minSize / mega)));
+
+    if (minSizeM > 4000) {
+      throw Error('file too large');
+    }
+
+    return minSizeM * mega;
   }
 }
