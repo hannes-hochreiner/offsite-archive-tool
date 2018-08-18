@@ -222,13 +222,8 @@ export class Controller {
     }
   }
 
-  _partUploadCallback(uploadId, partId, error, data) {
-    let part = this._repo.getUploadPartByUploadIdId(uploadId, partId);
-
-    console.log(part);
-    console.log(typeof part.log);
-    console.log(error);
-    console.log(data);
+  async _partUploadCallback(uploadId, partId, error, data) {
+    let part = await this._repo.getUploadPartByUploadIdId(uploadId, partId);
 
     if (error) {
       part.log.push({timestamp: this._utils.getTimestamp(), message: 'failed'});
