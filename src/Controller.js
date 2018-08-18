@@ -190,6 +190,7 @@ export class Controller {
         let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
         let buf = await this._utils.readFromFd(fd, part.start, part.end - part.start + 1);
         await this._utils.closeFd(fd);
+        let that = this;
 
         var params = {
           accountId: '-',
@@ -199,8 +200,9 @@ export class Controller {
           checksum: this._glacier.computeChecksums(buf).treeHash,
           range: `bytes ${part.start}-${part.end}/*`
         };
+        console.log(`assigning part ${part.start}-${part.end}`);
         this._glacier.uploadMultipartPart(params, function(err, data) {
-          let newPart = this._repo.getUploadPartByUploadIdId(part.uploadId, part.id);
+          let newPart = that._repo.getUploadPartByUploadIdId(part.uploadId, part.id);
 
           if (err) {
             newPart.status = 'failed';
@@ -213,7 +215,7 @@ export class Controller {
             console.log(`uploaded part ${part.start}-${part.end}`);
           }
 
-          this._repo.putUploadPart(newPart);
+          that._repo.putUploadPart(newPart);
         });
         uploadingParts++;
         part.status = 'uploading';
