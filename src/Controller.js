@@ -7,6 +7,10 @@ export class Controller {
   }
 
   async doPeriodicCheck() {
+    let dateStart = new Date();
+
+    console.log(`${dateStart.toISOString()}: started periodic check`);
+
     (await this._repo.getAllUploads()).filter(elem => {
       return elem.status === 'ok';
     }).forEach(async elem => {
@@ -67,6 +71,10 @@ export class Controller {
         console.log(error.stderr || '');
       }
     });
+
+    let dateEnd = new Date();
+
+    console.log(`${dateEnd.toISOString()}: ended periodic check (duration: ${(Math.round(dateEnd - dateStart) / 1000)} s)`);
   }
 
   async getAllUploads() {
