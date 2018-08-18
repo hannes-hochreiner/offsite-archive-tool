@@ -182,11 +182,14 @@ export class Controller {
     let parts = await this._repo.getUploadPartsByUploadId(doc.id);
     let maxUploadingParts = 8;
     let uploadingParts = 0;
-    
+    let succeededParts = 0;
+
     for (let cntr = 0; uploadingParts < maxUploadingParts && cntr < parts.length; cntr++) {
       let part = parts[cntr];
 
-      if (part.status === 'initialized') {
+      if (part.status === 'succeeded') {
+        succeededParts++;
+      } else if (part.status === 'initialized') {
         let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
         let buf = await this._utils.readFromFd(fd, part.start, part.end - part.start + 1);
         await this._utils.closeFd(fd);
@@ -227,6 +230,10 @@ export class Controller {
         }
       }
     }
+
+    console.log(`succeeded parts: ${succeededParts} / ${parts.length}`);
+
+    return succeededParts === parts.length;
   }
 
   async _partUploadCallback(uploadId, partId, error, data) {
