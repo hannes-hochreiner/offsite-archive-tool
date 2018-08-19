@@ -64,7 +64,9 @@ export class Controller {
             await this.startUpload(elem);
           }
         } else if (elem.stage === 'uploading') {
-          await this.checkUploadPartsForUpload(elem);
+          if (await this.checkUploadPartsForUpload(elem)) {
+            await this.finishUploading(elem);
+          }
         }
       } catch (error) {
         console.log(error.error || error);
@@ -259,7 +261,61 @@ export class Controller {
       part.status = 'succeeded';
     }
 
-    this._repo.putUploadPart(part);
+    await this._repo.putUploadPart(part);
+  }
+
+  async finishUploading(doc) {
+    doc.status = 'finishing_upload';
+    doc.upload.restartTimestamp = this._conf.restartTimestamp;
+    await this._repo.putUpload(doc);
+
+    // calculate hashes
+    let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
+    let chunkSize = 1024 * 1024;
+    let hashes = [];
+
+    for (let cntr = 0; cntr < doc.upload.size; cntr += chunkSize) {
+      let start = cntr;
+      let end = Math.min(cntr + chunkSize, doc.upload.size) - 1;
+      let buf = await this._utils.readFromFd(fd, start, end - start + 1);
+      hashes.push(this._utils.sha256sum(buf));
+    }
+
+    await this._utils.closeFd(fd);
+
+    // level hashes
+    while (hashes.size > 1) {
+      hashes = hashes.reduce((prev, curr, idx) => {
+        if (idx % 2 === 0) {
+          prev.push(curr);
+        } else {
+          prev[prev.length - 1] = this._utils.sha256sum(`${prev[prev.length - 1]}${curr}`);
+        }
+
+        return prev;
+      }, []);
+    }
+
+    doc.upload.treeHash = hashes[0];
+
+    // finish upload
+    var params = {
+      accountId: "-", 
+      archiveSize: doc.upload.size, 
+      checksum: doc.upload.treeHash, 
+      uploadId: doc.upload.aws.uploadId,
+      vaultName: this._conf.aws.vaultName
+    };
+
+    let res = await this._glacier.completeMultipartUpload(params).promise();
+
+    // store result data
+    doc.upload.aws.archiveId = res.archiveId;
+    doc.upload.aws.location = res.location;
+    doc.upload.aws.checksum = res.checksum;
+
+    doc.status = 'finished_upload';
+    await this._repo.putUpload(doc);
   }
 
   _calculatePartSize(size) {

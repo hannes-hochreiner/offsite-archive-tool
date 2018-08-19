@@ -1,11 +1,19 @@
 import { spawn, exec } from 'child_process';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { readFile as rf, stat, open, read, close } from "fs";
 import { default as uuidv4 } from "uuid/v4";
 
 export class Utils {
   constructor() {
     this.uuid = uuidv4;
+  }
+
+  sha256sum(data) {
+    let hash = createHash('sha256');
+
+    hash.update(data);
+
+    return hash.digest('hex');
   }
 
   closeFd(fd) {
