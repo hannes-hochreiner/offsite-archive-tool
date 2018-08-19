@@ -279,6 +279,17 @@ export class Controller {
 
     // check with part hashes
     let parts = await this._repo.getUploadPartsByUploadId(doc.id);
+    parts.sort((a, b) => {
+      if (a.start < b.start) {
+        return -1;
+      }
+
+      if (a.start > b.start) {
+        return 1;
+      }
+
+      return 0;
+    });
     let hashes = parts.map(part => { return part.treeHash; });
 
     while (hashes.length > 1) {
