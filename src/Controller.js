@@ -12,7 +12,7 @@ export class Controller {
     console.log(`${dateStart.toISOString()}: started periodic check`);
 
     (await this._repo.getAllUploads()).filter(elem => {
-      return elem.status === 'ok';
+      return true; //elem.status === 'ok';
     }).forEach(async elem => {
       try {
         if (elem.stage === 'initialized') {
@@ -269,7 +269,7 @@ export class Controller {
   }
 
   async finishUploading(doc) {
-    doc.status = 'finishing_upload';
+    doc.stage = 'finishing_upload';
     doc.upload.restartTimestamp = this._conf.restartTimestamp;
     await this._repo.putUpload(doc);
 
