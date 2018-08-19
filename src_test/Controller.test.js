@@ -20,7 +20,7 @@ describe('Controller', () => {
         vaultName: 'testVaultName'
       }
     };
-    utils = jasmine.createSpyObj('utils', ['getTimestamp', 'uuid', 'statFile', 'spawnDetached', 'spawnRemoteCommand', 'getRandomString']);
+    utils = jasmine.createSpyObj('utils', ['readFromFd', 'sha256sum', 'closeFd', 'getFd', 'getTimestamp', 'uuid', 'statFile', 'spawnDetached', 'spawnRemoteCommand', 'getRandomString']);
     repo = jasmine.createSpyObj('repo', ['putUpload', 'putUploadPart']);
     glacier = jasmine.createSpyObj('glacier', ['initiateMultipartUpload']);
   });
@@ -193,5 +193,34 @@ describe('Controller', () => {
       status: 'initialized',
       log: [{timestamp: 'timestamp2', message: 'initialized'}]
     });
+  });
+
+  it('should calculate the correct tree hash', async () => {
+    utils.getFd.and.returnValue(Promise.resolve(12));
+    utils.readFromFd.and.returnValues(Promise.resolve('data1'), Promise.resolve('data2'), Promise.resolve('data3'));
+    utils.sha256sum.and.returnValues('hash1', 'hash2', 'hash3', 'hash1_hash2', 'hash1_hash2_hash3');
+    // utils.closeFd;
+
+    let ctrllr = new Controller(repo, conf, utils, glacier);
+
+    let res = await ctrllr._calculateTreeHashOfFile({
+      compression: {
+        filename: 'testCompressionFilename'
+      },
+      upload: {
+        size: 1024 * 1024 * 2 + 1024
+      }
+    });
+
+    expect(utils.getFd.calls.argsFor(0)).toEqual(['testDirectory/testCompressionFilename']);
+    expect(utils.readFromFd.calls.argsFor(0)).toEqual([12, 0, 1024 * 1024]);
+    expect(utils.readFromFd.calls.argsFor(1)).toEqual([12, 1024 * 1024, 1024 * 1024]);
+    expect(utils.readFromFd.calls.argsFor(2)).toEqual([12, 1024 * 1024 * 2, 1024]);
+    expect(utils.sha256sum.calls.argsFor(0)).toEqual(['data1']);
+    expect(utils.sha256sum.calls.argsFor(1)).toEqual(['data2']);
+    expect(utils.sha256sum.calls.argsFor(2)).toEqual(['data3']);
+    expect(utils.sha256sum.calls.argsFor(3)).toEqual(['hash1hash2']);
+    expect(utils.sha256sum.calls.argsFor(4)).toEqual(['hash1_hash2hash3']);
+    expect(res, 'hash1_hash2_hash3');
   });
 });

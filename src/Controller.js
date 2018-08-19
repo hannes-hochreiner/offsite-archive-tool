@@ -12,7 +12,7 @@ export class Controller {
     console.log(`${dateStart.toISOString()}: started periodic check`);
 
     (await this._repo.getAllUploads()).filter(elem => {
-      return true; //elem.status === 'ok';
+      return elem.status !== 'error';
     }).forEach(async elem => {
       try {
         if (elem.stage === 'initialized') {
@@ -270,37 +270,11 @@ export class Controller {
 
   async finishUploading(doc) {
     doc.stage = 'finishing_upload';
+    doc.status = 'ok';
     doc.upload.restartTimestamp = this._conf.restartTimestamp;
     await this._repo.putUpload(doc);
 
-    // calculate hashes
-    let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
-    let chunkSize = 1024 * 1024;
-    let hashes = [];
-
-    for (let cntr = 0; cntr < doc.upload.size; cntr += chunkSize) {
-      let start = cntr;
-      let end = Math.min(cntr + chunkSize, doc.upload.size) - 1;
-      let buf = await this._utils.readFromFd(fd, start, end - start + 1);
-      hashes.push(this._utils.sha256sum(buf));
-    }
-
-    await this._utils.closeFd(fd);
-
-    // level hashes
-    while (hashes.size > 1) {
-      hashes = hashes.reduce((prev, curr, idx) => {
-        if (idx % 2 === 0) {
-          prev.push(curr);
-        } else {
-          prev[prev.length - 1] = this._utils.sha256sum(`${prev[prev.length - 1]}${curr}`);
-        }
-
-        return prev;
-      }, []);
-    }
-
-    doc.upload.treeHash = hashes[0];
+    doc.upload.treeHash = await this._calculateTreeHashOfFile(doc);
 
     // finish upload
     var params = {
@@ -320,6 +294,38 @@ export class Controller {
 
     doc.status = 'finished_upload';
     await this._repo.putUpload(doc);
+  }
+
+  async _calculateTreeHashOfFile(doc) {
+    // calculate hashes
+    let fd = await this._utils.getFd(`${this._conf.workingDirectory}/${doc.compression.filename}`);
+    let chunkSize = 1024 * 1024;
+    let hashes = [];
+
+    for (let cntr = 0; cntr < doc.upload.size; cntr += chunkSize) {
+      let start = cntr;
+      let end = Math.min(cntr + chunkSize, doc.upload.size) - 1;
+      let buf = await this._utils.readFromFd(fd, start, end - start + 1);
+
+      hashes.push(this._utils.sha256sum(buf));
+    }
+
+    await this._utils.closeFd(fd);
+
+    // level hashes
+    while (hashes.length > 1) {
+      hashes = hashes.reduce((prev, curr, idx) => {
+        if (idx % 2 === 0) {
+          prev.push(curr);
+        } else {
+          prev[prev.length - 1] = this._utils.sha256sum(`${prev[prev.length - 1]}${curr}`);
+        }
+
+        return prev;
+      }, []);
+    }
+
+    return hashes[0];
   }
 
   _calculatePartSize(size) {
