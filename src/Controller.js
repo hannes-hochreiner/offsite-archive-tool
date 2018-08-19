@@ -67,6 +67,10 @@ export class Controller {
           if (await this.checkUploadPartsForUpload(elem)) {
             await this.finishUploading(elem);
           }
+        } else if (elem.stage === 'finishing_upload') {
+          if (elem.upload.restartTimestamp !== this._conf.restartTimestamp) {
+            await this.finishUploading(elem);
+          }
         }
       } catch (error) {
         console.log(error.error || error);
@@ -301,7 +305,7 @@ export class Controller {
     // finish upload
     var params = {
       accountId: "-", 
-      archiveSize: doc.upload.size, 
+      archiveSize: `${doc.upload.size}`, 
       checksum: doc.upload.treeHash, 
       uploadId: doc.upload.aws.uploadId,
       vaultName: this._conf.aws.vaultName
