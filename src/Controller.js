@@ -273,7 +273,9 @@ export class Controller {
     doc.upload.restartTimestamp = this._conf.restartTimestamp;
     await this._repo.putUpload(doc);
 
+    console.log(`${(new Date()).toISOString()}: treehash start`);
     doc.upload.treeHash = await this._calculateTreeHashOfFile(doc);
+    console.log(`${(new Date()).toISOString()}: treehash total end`);
 
     // check with part hashes
     let parts = await this._repo.getUploadPartsByUploadId(doc.id);
@@ -291,6 +293,7 @@ export class Controller {
       }, []);
     }
 
+    console.log(`${(new Date()).toISOString()}: treehash parts end`);
     console.log(`treehash complete: ${doc.upload.treeHash}\n   treehash parts: ${hashes[0]}`);
 
     // finish upload
