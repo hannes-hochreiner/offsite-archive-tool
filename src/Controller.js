@@ -270,7 +270,6 @@ export class Controller {
 
   async finishUploading(doc) {
     doc.stage = 'finishing_upload';
-    doc.status = 'ok';
     doc.upload.restartTimestamp = this._conf.restartTimestamp;
     await this._repo.putUpload(doc);
 
