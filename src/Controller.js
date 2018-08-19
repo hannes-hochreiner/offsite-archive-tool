@@ -291,7 +291,7 @@ export class Controller {
     doc.upload.aws.location = res.location;
     doc.upload.aws.checksum = res.checksum;
 
-    doc.status = 'finished_upload';
+    doc.stage = 'finished_upload';
     await this._repo.putUpload(doc);
   }
 
