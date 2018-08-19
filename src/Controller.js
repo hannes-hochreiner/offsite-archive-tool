@@ -318,6 +318,8 @@ export class Controller {
 
     let res = await this._glacier.completeMultipartUpload(params).promise();
 
+    console.log(res);
+
     // store result data
     doc.upload.aws.archiveId = res.archiveId;
     doc.upload.aws.location = res.location;
