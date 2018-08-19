@@ -320,6 +320,7 @@ export class Controller {
 
     console.log(res);
 
+    doc = await this._repo.getUploadById(doc.id);
     // store result data
     doc.upload.aws.archiveId = res.archiveId;
     doc.upload.aws.location = res.location;
