@@ -10,8 +10,13 @@ export class Utils {
 
   sha256sum(data) {
     let hash = createHash('sha256');
+    let d = data;
 
-    hash.update(data);
+    if (typeof d === 'string') {
+      d = Buffer.from(d, 'hex');
+    }
+
+    hash.update(d);
 
     return hash.digest('hex');
   }
