@@ -275,6 +275,24 @@ export class Controller {
 
     doc.upload.treeHash = await this._calculateTreeHashOfFile(doc);
 
+    // check with part hashes
+    let parts = await this._repo.getUploadPartsByUploadId(doc.id);
+    let hashes = parts.map(part => { return part.treeHash; });
+
+    while (hashes.length > 1) {
+      hashes = hashes.reduce((prev, curr, idx) => {
+        if (idx % 2 === 0) {
+          prev.push(curr);
+        } else {
+          prev[prev.length - 1] = this._utils.sha256sum(`${prev[prev.length - 1]}${curr}`);
+        }
+
+        return prev;
+      }, []);
+    }
+
+    console.log(`treehash complete: ${doc.upload.treeHash}\n   treehash parts: ${hashes[0]}`);
+
     // finish upload
     var params = {
       accountId: "-", 
