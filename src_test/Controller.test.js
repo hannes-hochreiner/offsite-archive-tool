@@ -199,7 +199,6 @@ describe('Controller', () => {
     utils.getFd.and.returnValue(Promise.resolve(12));
     utils.readFromFd.and.returnValues(Promise.resolve('data1'), Promise.resolve('data2'), Promise.resolve('data3'));
     utils.sha256sum.and.returnValues('hash1', 'hash2', 'hash3', 'hash1_hash2', 'hash1_hash2_hash3');
-    // utils.closeFd;
 
     let ctrllr = new Controller(repo, conf, utils, glacier);
 
