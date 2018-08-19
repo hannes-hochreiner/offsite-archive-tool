@@ -74,7 +74,7 @@ export class Controller {
 
     let dateEnd = new Date();
 
-    console.log(`${dateEnd.toISOString()}: ended periodic check (duration: ${(Math.round(dateEnd - dateStart) / 1000)} s)`);
+    console.log(`${dateEnd.toISOString()}: ended periodic check (duration: ${(dateEnd - dateStart) / 1000} s)`);
   }
 
   async getAllUploads() {
@@ -239,7 +239,7 @@ export class Controller {
       }
     }
 
-    console.log(`succeeded parts: ${succeededParts} / ${parts.length}`);
+    console.log(`${(new Date()).toISOString()} succeeded parts: ${succeededParts} / ${parts.length}`);
 
     return succeededParts === parts.length;
   }
