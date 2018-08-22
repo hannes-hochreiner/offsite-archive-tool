@@ -106,7 +106,7 @@ export class Controller {
 
   async startCompression(doc) {
     doc.compression = {};
-    doc.compression.password = await this._utils.getRandomString(20);
+    doc.compression.password = await this._utils.getRandomString(128);
     doc.compression.filename = `${doc.id}.7z`;
     doc.compression.logFilename = `${doc.id}.log`;
     doc.compression.pid = (await this._utils.spawnRemoteCommand(
