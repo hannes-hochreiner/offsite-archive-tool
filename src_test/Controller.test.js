@@ -67,7 +67,7 @@ describe('Controller', () => {
       uri: 'testUri'
     });
 
-    expect(utils.getRandomString).toHaveBeenCalledWith(20);
+    expect(utils.getRandomString).toHaveBeenCalledWith(128);
     expect(utils.spawnRemoteCommand).toHaveBeenCalledWith(
       conf.ssh,
       '7z a -t7z -mhe=on -p12345678901234567890 testId.7z testUri </dev/null &>testId.log & echo $!'
