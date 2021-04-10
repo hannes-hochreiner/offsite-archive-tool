@@ -1,3 +1,5 @@
+# This repository is archived.
+
 # Offsite Archive Tool
 
 A simple tool to help me archive my files to Amazon Glacier.
